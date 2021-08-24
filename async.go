@@ -18,7 +18,6 @@ func async(f func(...interface{}) interface{}, args ...interface{}) <-chan inter
 		defer close(pipe)
 		pipe <- f(args...)
 	}()
-
 	return pipe
 }
 
