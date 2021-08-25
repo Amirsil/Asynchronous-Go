@@ -15,27 +15,13 @@ func main() {
 	asyncAwaitTest()
 	awaitAllTest()
 	whenDoneTest()
-
+	whenAllDoneTest()
 }
 
 func asyncAwaitTest() {
 	fmt.Println("\nTesting async/await functionality")
 	fmt.Printf("%v\n", await(async(getJokeFromAPI)))
 	fmt.Printf("%v\n", await(async(randWithDelay, 2)))
-}
-
-func whenDoneTest() {
-	fmt.Println("\nTesting whenDone callback functionality")
-	done := false
-
-	whenDone(async(randWithDelay, 3),
-		func(randNUm int) {
-			fmt.Printf("%v\n", randNUm)
-			done = true
-		})
-
-	for !done {
-	}
 }
 
 func awaitAllTest() {
@@ -46,6 +32,43 @@ func awaitAllTest() {
 
 	for index, result := range awaitAll(randNum, joke) {
 		fmt.Printf("%v: %v\n", index+1, result)
+	}
+}
+
+func whenDoneTest() {
+	fmt.Println("\nTesting whenDone callback functionality")
+	done := false
+
+	whenDone(
+		func(randNum int) {
+			fmt.Printf("%v\n", randNum)
+			done = true
+		}, async(randWithDelay, 3))
+
+	for !done {
+	}
+}
+
+func whenAllDoneTest() {
+	fmt.Println("\nTesting whenAllDone callback functionality")
+	done := false
+
+	whenAllDone(
+		func(results []interface{}) {
+			fmt.Printf("%v\n", results)
+			done = true
+		},
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+		async(getJokeFromAPI),
+	)
+
+	for !done {
 	}
 }
 

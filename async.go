@@ -48,12 +48,22 @@ func awaitAll(awaitables ...<-chan interface{}) []interface{} {
 	return results
 }
 
-func whenDone(awaitable <-chan interface{}, function interface{}) {
+func whenDone(function interface{}, awaitable <-chan interface{}) {
 	go func() {
 		callableFunction := reflect.ValueOf(function)
-		item := <-awaitable
-		arg := reflect.New(reflect.TypeOf(item)).Elem()
-		arg.Set(reflect.ValueOf(item))
-		callableFunction.Call([]reflect.Value{arg})
+		item := await(awaitable)
+		functionArg := reflect.New(reflect.TypeOf(item)).Elem()
+		functionArg.Set(reflect.ValueOf(item))
+		callableFunction.Call([]reflect.Value{functionArg})
+	}()
+}
+
+func whenAllDone(function interface{}, awaitables ...<-chan interface{}) {
+	go func() {
+		callableFunction := reflect.ValueOf(function)
+		results := awaitAll(awaitables...)
+		functionArg := reflect.New(reflect.TypeOf(results)).Elem()
+		functionArg.Set(reflect.ValueOf(results))
+		callableFunction.Call([]reflect.Value{functionArg})
 	}()
 }
