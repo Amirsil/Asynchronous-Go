@@ -29,8 +29,8 @@ func whenDoneTest() {
 	done := false
 
 	whenDone(async(randWithDelay, 3),
-		func(randNUm int) {
-			fmt.Printf("%v\n", randNUm)
+		func(randNum int) {
+			fmt.Printf("%v\n", randNum)
 			done = true
 		})
 
