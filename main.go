@@ -11,6 +11,8 @@ import (
 )
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+	
 	fmt.Print("Starting Asyncronous ")
 	randNum := async(randWithDelay, 3)
 	joke := async(getJokeFromAPI)
@@ -28,7 +30,6 @@ func main() {
 }
 
 func randWithDelay(delay int) int {
-	rand.Seed(time.Now().UnixNano())
 	time.Sleep(time.Duration(delay) * time.Second)
 	return rand.Int()
 }
