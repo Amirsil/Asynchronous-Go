@@ -12,21 +12,41 @@ import (
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
-	
-	fmt.Print("Starting Asyncronous ")
-	randNum := async(randWithDelay, 3)
-	joke := async(getJokeFromAPI)
-	fmt.Print("CPU Efficient Work\n")
+	asyncAwaitTest()
+	awaitAllTest()
+	whenDoneTest()
 
-	results := awaitAll(randNum, joke)
+}
 
-	for index, result := range results {
-		fmt.Printf("%v: %v\n", index+1, result)
-	}
-
-	time.Sleep(1)
+func asyncAwaitTest() {
+	fmt.Println("\nTesting async/await functionality")
 	fmt.Printf("%v\n", await(async(getJokeFromAPI)))
 	fmt.Printf("%v\n", await(async(randWithDelay, 2)))
+}
+
+func whenDoneTest() {
+	fmt.Println("\nTesting whenDone callback functionality")
+	done := false
+
+	whenDone(async(randWithDelay, 3),
+		func(randNUm int) {
+			fmt.Printf("%v\n", randNUm)
+			done = true
+		})
+
+	for !done {
+	}
+}
+
+func awaitAllTest() {
+	fmt.Print("\nTesting Asyncronous ")
+	randNum := async(randWithDelay, 3)
+	joke := async(getJokeFromAPI)
+	fmt.Print("CPU Efficient Processing\n")
+
+	for index, result := range awaitAll(randNum, joke) {
+		fmt.Printf("%v: %v\n", index+1, result)
+	}
 }
 
 func randWithDelay(delay int) int {

@@ -5,9 +5,9 @@ import (
 	"sync"
 )
 
-func async(f interface{}, args ...interface{}) <-chan interface{} {
+func async(function interface{}, args ...interface{}) <-chan interface{} {
 	promise := make(chan interface{}, 1)
-	callableFunction := reflect.ValueOf(f)
+	callableFunction := reflect.ValueOf(function)
 
 	var injectableArguments []reflect.Value
 
@@ -19,7 +19,7 @@ func async(f interface{}, args ...interface{}) <-chan interface{} {
 
 	go func() {
 		defer close(promise)
-		promise <- callableFunction.Call(injectableArguments[:])[0]
+		promise <- callableFunction.Call(injectableArguments[:])[0].Interface()
 	}()
 
 	return promise
@@ -46,4 +46,14 @@ func awaitAll(awaitables ...<-chan interface{}) []interface{} {
 	wg.Wait()
 
 	return results
+}
+
+func whenDone(awaitable <-chan interface{}, function interface{}) {
+	go func() {
+		callableFunction := reflect.ValueOf(function)
+		item := <-awaitable
+		arg := reflect.New(reflect.TypeOf(item)).Elem()
+		arg.Set(reflect.ValueOf(item))
+		callableFunction.Call([]reflect.Value{arg})
+	}()
 }
