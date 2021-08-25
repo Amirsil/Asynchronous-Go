@@ -4,21 +4,30 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
+	"reflect"
 	"sync"
 	"time"
 )
 
-func async(f func(...interface{}) interface{}, args ...interface{}) <-chan interface{} {
-	pipe := make(chan interface{}, 1)
+func async(f interface{}, args ...interface{}) <-chan interface{} {
+	promise := make(chan interface{}, 1)
+	callableFunction := reflect.ValueOf(f)
+	var injectableArguments []reflect.Value
+
+	for _, arg := range args {
+		correctTypeArg := reflect.New(reflect.TypeOf(arg)).Elem()
+		correctTypeArg.Set(reflect.ValueOf(arg))
+		injectableArguments = append(injectableArguments, correctTypeArg)
+	}
 
 	go func() {
-		defer close(pipe)
-		pipe <- f(args...)
+		defer close(promise)
+		promise <- callableFunction.Call(injectableArguments[:])[0]
 	}()
-	return pipe
+
+	return promise
 }
 
 func await(awaitable <-chan interface{}) interface{} {
@@ -43,22 +52,23 @@ func awaitAll(awaitables ...<-chan interface{}) []interface{} {
 	return results
 }
 
-// randWithDelay(delay int) (int)
-func randWithDelay(args ...interface{}) interface{} {
-	delay := time.Duration(args[0].(int))
-
+func randWithDelay(delay int) int {
 	rand.Seed(time.Now().UnixNano())
-	time.Sleep(delay * time.Second)
+	time.Sleep(time.Duration(delay) * time.Second)
 	return rand.Int()
 }
 
-// getJokeFromAPI() (string)
-func getJokeFromAPI(args ...interface{}) interface{} {
+func getJokeFromAPI() (string, error) {
 	httpResp, err := http.Get("https://v2.jokeapi.dev/joke/Any")
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
+
 	bodyBytes, err := ioutil.ReadAll(httpResp.Body)
+	if err != nil {
+		return "", err
+	}
+
 	var response map[string]interface{}
 	json.Unmarshal([]byte(string(bodyBytes)), &response)
 
@@ -69,14 +79,17 @@ func getJokeFromAPI(args ...interface{}) interface{} {
 		joke = fmt.Sprintf("\nquestion: %v\nanswer: %v", response["setup"], response["delivery"])
 	}
 
-	return joke
+	return joke, nil
 }
 
 func main() {
+	fmt.Print("Starting Asyncronous ")
 	randNum := async(randWithDelay, 3)
 	joke := async(getJokeFromAPI)
+	fmt.Print("CPU Efficient Work\n")
 
 	results := awaitAll(randNum, joke)
+
 	for index, result := range results {
 		fmt.Printf("%v: %v\n", index+1, result)
 	}
