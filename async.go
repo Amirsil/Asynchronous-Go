@@ -18,7 +18,6 @@ func Async(function interface{}, args ...interface{}) Awaitable {
 		}
 
 		result := ReflectFunction(function).Call(reflectedArguments[:])
-
 		valueChannel <- result[0].Interface()
 		errorChannel <- GetFunctionError(result)
 	}()
