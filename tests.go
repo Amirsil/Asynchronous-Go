@@ -2,107 +2,52 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
 	"time"
-
-	"github.com/wesovilabs/koazee"
 )
 
 func main() {
-	fmt.Println("Starting Execution")
-	rand.Seed(time.Now().UnixNano())
-	asyncAwaitTest()
-	compareTimeDifference(awaitAllTest, SynchronousTest, 20)
-	whenDoneTest()
-	whenAllDoneTest()
+	Async(getJokeFromAPI).
+		Then(func(item string) (int, error) {
+			fmt.Printf("item: %v\n", item)
+			return 0, errors.New("My Bad")
+		}).
+		Catch(func(err error) { log.Fatal(err) }).
+		Await()
+
+	// fmt.Println("Starting Execution")
+	// rand.Seed(time.Now().UnixNano())
+	// asyncAwaitTest()
+	// compareTimeDifference(awaitAllTest, SynchronousTest, 20)
+	// whenDoneTest()
+	// whenAllDoneTest()
 }
 
 func asyncAwaitTest() {
 	fmt.Println("\nTesting async/await functionality")
-	fmt.Printf("%v\n", Async(getJokeFromAPI).Await())
-	fmt.Printf("%v\n", Async(randWithDelay, 2).Await())
+	joke, _ := Async(getJokeFromAPI).Await()
+	fmt.Printf("%v\n", joke)
+
+	_, err := Async(randWithDelay, 2).Await()
+	fmt.Printf("%v\n", err)
+
+	_, err = Async(randWithDelay, 7).Await()
+
+	fmt.Printf("%v\n", err)
 }
 
-func awaitAllTest(numberOfExecutions int) {
-	awaitables := koazee.StreamOf(
-		make([]string, numberOfExecutions)).
-		Map(
-			func(string) Awaitable {
-				return Async(getJokeFromAPI)
-			}).
-		Do().Out().
-		Val().([]Awaitable)
-
-	for index, result := range AwaitAll(awaitables...) {
-		fmt.Printf("%v: %v\n", index+1, result.(string))
+func randWithDelay(delay int) (int, error) {
+	if delay > 5 {
+		return 0, errors.New("Delay is too big!")
 	}
-}
 
-func SynchronousTest(numberOfExecutions int) {
-	results := koazee.StreamOf(make([]int, numberOfExecutions)).
-		Map(
-			func(int) string {
-				return getJokeFromAPI()
-			}).
-		Do().Out().
-		Val().([]string)
-
-	for index, result := range results {
-		fmt.Printf("%v: %v\n", index+1, result)
-	}
-}
-
-func whenDoneTest() {
-	fmt.Println("\nTesting whenDone callback functionality")
-	done := false
-
-	CallWhenDone(
-		func(randNum int) {
-			fmt.Printf("%v\n", randNum)
-			done = true
-		}, Async(randWithDelay, 3))
-
-	for !done {
-	}
-}
-
-func whenAllDoneTest() {
-	fmt.Println("\nTesting whenAllDone callback functionality")
-	done := false
-
-	CallWhenAllDone(
-		func(results []interface{}) {
-			for _, result := range results {
-				fmt.Printf("result: %v\n\n", result)
-			}
-			done = true
-		},
-		Async(randWithDelay, 2),
-		Async(getJokeFromAPI),
-		Async(getJokeFromAPI),
-	)
-
-	for !done {
-	}
-}
-
-func compareTimeDifference(
-	concurrentFunc interface{},
-	nonConcurrentFunc interface{},
-	numberOfExecutions int) {
-
-	conurrectTime := MeasureTime(concurrentFunc, numberOfExecutions)
-	nonConcurrentTime := MeasureTime(nonConcurrentFunc, numberOfExecutions)
-	fmt.Printf("Concurrent took %v and Normal took %v", conurrectTime, nonConcurrentTime)
-}
-
-func randWithDelay(delay int) int {
 	time.Sleep(time.Duration(delay) * time.Second)
-	return rand.Int()
+	return rand.Int(), nil
 }
 
 func getJokeFromAPI() string {
