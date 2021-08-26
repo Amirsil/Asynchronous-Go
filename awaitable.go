@@ -1,6 +1,8 @@
 package main
 
-import "reflect"
+import (
+	"reflect"
+)
 
 type Awaitable struct {
 	value <-chan interface{}

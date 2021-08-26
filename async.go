@@ -25,3 +25,14 @@ func Async(function interface{}, args ...interface{}) Awaitable {
 
 	return Awaitable{valueChannel, errorChannel}
 }
+
+func AwaitAll(awaitables ...Awaitable) []interface{} {
+	results := make([]interface{}, len(awaitables))
+	errors := make([]error, len(awaitables))
+
+	for index, awaitable := range awaitables {
+		results[index], errors[index] = awaitable.Await()
+	}
+
+	return results
+}
