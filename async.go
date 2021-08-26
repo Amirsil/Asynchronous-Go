@@ -5,31 +5,25 @@ import (
 	"sync"
 )
 
-func async(function interface{}, args ...interface{}) <-chan interface{} {
-	promise := make(chan interface{}, 1)
-	callableFunction := reflect.ValueOf(function)
-
-	var injectableArguments []reflect.Value
-
-	for _, arg := range args {
-		correctTypeArg := reflect.New(reflect.TypeOf(arg)).Elem()
-		correctTypeArg.Set(reflect.ValueOf(arg))
-		injectableArguments = append(injectableArguments, correctTypeArg)
-	}
+func Async(function interface{}, args ...interface{}) Awaitable {
+	channel := make(chan interface{}, 1)
 
 	go func() {
-		defer close(promise)
-		promise <- callableFunction.Call(injectableArguments[:])[0].Interface()
+		defer close(channel)
+		callableFunction := ReflectFunction(function)
+		reflectedArguments := make([]reflect.Value, len(args))
+
+		for index, arg := range args {
+			reflectedArguments[index] = ReflectType(arg)
+		}
+
+		channel <- callableFunction.Call(reflectedArguments[:])[0].Interface()
 	}()
 
-	return promise
+	return channel
 }
 
-func await(awaitable <-chan interface{}) interface{} {
-	return <-awaitable
-}
-
-func awaitAll(awaitables ...<-chan interface{}) []interface{} {
+func AwaitAll(awaitables ...Awaitable) []interface{} {
 	results := make([]interface{}, len(awaitables))
 	wg := new(sync.WaitGroup)
 
@@ -39,31 +33,27 @@ func awaitAll(awaitables ...<-chan interface{}) []interface{} {
 		staticIndex, staticAwaitable := index, awaitable
 		go func() {
 			defer wg.Done()
-			results[staticIndex] = <-staticAwaitable
+			results[staticIndex] = staticAwaitable.Await()
 		}()
 
 	}
-	wg.Wait()
 
+	wg.Wait()
 	return results
 }
 
-func whenDone(function interface{}, awaitable <-chan interface{}) {
+func CallWhenDone(function interface{}, awaitable Awaitable) {
 	go func() {
-		callableFunction := reflect.ValueOf(function)
-		item := await(awaitable)
-		functionArg := reflect.New(reflect.TypeOf(item)).Elem()
-		functionArg.Set(reflect.ValueOf(item))
-		callableFunction.Call([]reflect.Value{functionArg})
+		callableFunction := ReflectFunction(function)
+		result := ReflectType(awaitable.Await())
+		callableFunction.Call([]reflect.Value{result})
 	}()
 }
 
-func whenAllDone(function interface{}, awaitables ...<-chan interface{}) {
+func CallWhenAllDone(function interface{}, awaitables ...Awaitable) {
 	go func() {
-		callableFunction := reflect.ValueOf(function)
-		results := awaitAll(awaitables...)
-		functionArg := reflect.New(reflect.TypeOf(results)).Elem()
-		functionArg.Set(reflect.ValueOf(results))
-		callableFunction.Call([]reflect.Value{functionArg})
+		callableFunction := ReflectFunction(function)
+		results := ReflectType(AwaitAll(awaitables...))
+		callableFunction.Call([]reflect.Value{results})
 	}()
 }
