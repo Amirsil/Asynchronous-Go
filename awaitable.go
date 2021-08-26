@@ -51,6 +51,7 @@ func (awaitable Awaitable) Catch(handleErr interface{}) Awaitable {
 				Call([]reflect.Value{
 					ReflectType(err)})
 		}
+		
 		valueChannel <- value
 		errorChannel <- nil
 	}()
