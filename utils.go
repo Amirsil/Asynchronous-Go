@@ -23,7 +23,6 @@ func ReflectType(value interface{}) reflect.Value {
 }
 
 func MeasureTime(function interface{}, args ...interface{}) time.Duration {
-	callableFunction := ReflectFunction(function)
 	reflectedArguments := make([]reflect.Value, len(args))
 
 	for index, arg := range args {
@@ -31,6 +30,6 @@ func MeasureTime(function interface{}, args ...interface{}) time.Duration {
 	}
 
 	start := time.Now()
-	callableFunction.Call(reflectedArguments[:])
+	ReflectFunction(function).Call(reflectedArguments[:])
 	return time.Since(start)
 }

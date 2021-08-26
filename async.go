@@ -10,14 +10,15 @@ func Async(function interface{}, args ...interface{}) Awaitable {
 
 	go func() {
 		defer close(channel)
-		callableFunction := ReflectFunction(function)
 		reflectedArguments := make([]reflect.Value, len(args))
 
 		for index, arg := range args {
 			reflectedArguments[index] = ReflectType(arg)
 		}
 
-		channel <- callableFunction.Call(reflectedArguments[:])[0].Interface()
+		channel <- ReflectFunction(function).
+			Call(reflectedArguments[:])[0].
+			Interface()
 	}()
 
 	return channel
@@ -44,16 +45,14 @@ func AwaitAll(awaitables ...Awaitable) []interface{} {
 
 func CallWhenDone(function interface{}, awaitable Awaitable) {
 	go func() {
-		callableFunction := ReflectFunction(function)
 		result := ReflectType(awaitable.Await())
-		callableFunction.Call([]reflect.Value{result})
+		ReflectFunction(function).Call([]reflect.Value{result})
 	}()
 }
 
 func CallWhenAllDone(function interface{}, awaitables ...Awaitable) {
 	go func() {
-		callableFunction := ReflectFunction(function)
 		results := ReflectType(AwaitAll(awaitables...))
-		callableFunction.Call([]reflect.Value{results})
+		ReflectFunction(function).Call([]reflect.Value{results})
 	}()
 }
