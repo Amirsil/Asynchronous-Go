@@ -33,3 +33,17 @@ func MeasureTime(function interface{}, args ...interface{}) time.Duration {
 	ReflectFunction(function).Call(reflectedArguments[:])
 	return time.Since(start)
 }
+
+func GetFunctionError(returnValue []reflect.Value) error {
+	err := error(nil)
+
+	if len(returnValue) > 1 {
+		returnedError := returnValue[1].Interface()
+
+		if returnedError != nil {
+			err = returnedError.(error)
+		}
+	}
+
+	return err
+}

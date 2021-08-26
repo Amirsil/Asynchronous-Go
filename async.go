@@ -2,57 +2,36 @@ package main
 
 import (
 	"reflect"
-	"sync"
 )
 
 func Async(function interface{}, args ...interface{}) Awaitable {
-	channel := make(chan interface{}, 1)
+	valueChannel := make(chan interface{}, 1)
+	errorChannel := make(chan error, 1)
 
 	go func() {
-		defer close(channel)
+		defer close(valueChannel)
+		defer close(errorChannel)
 		reflectedArguments := make([]reflect.Value, len(args))
 
 		for index, arg := range args {
 			reflectedArguments[index] = ReflectType(arg)
 		}
 
-		channel <- ReflectFunction(function).
-			Call(reflectedArguments[:])[0].
-			Interface()
+		result := ReflectFunction(function).Call(reflectedArguments[:])
+		valueChannel <- result[0].Interface()
+		errorChannel <- GetFunctionError(result)
 	}()
 
-	return channel
+	return Awaitable{valueChannel, errorChannel}
 }
 
 func AwaitAll(awaitables ...Awaitable) []interface{} {
 	results := make([]interface{}, len(awaitables))
-	wg := new(sync.WaitGroup)
+	errors := make([]error, len(awaitables))
 
 	for index, awaitable := range awaitables {
-		wg.Add(1)
-		// index and awaitable could change before the goroutine is over
-		staticIndex, staticAwaitable := index, awaitable
-		go func() {
-			defer wg.Done()
-			results[staticIndex] = staticAwaitable.Await()
-		}()
-
+		results[index], errors[index] = awaitable.Await()
 	}
 
-	wg.Wait()
 	return results
-}
-
-func CallWhenDone(function interface{}, awaitable Awaitable) {
-	go func() {
-		result := ReflectType(awaitable.Await())
-		ReflectFunction(function).Call([]reflect.Value{result})
-	}()
-}
-
-func CallWhenAllDone(function interface{}, awaitables ...Awaitable) {
-	go func() {
-		results := ReflectType(AwaitAll(awaitables...))
-		ReflectFunction(function).Call([]reflect.Value{results})
-	}()
 }

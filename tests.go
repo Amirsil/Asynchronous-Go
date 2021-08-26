@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,19 +16,42 @@ import (
 func main() {
 	fmt.Println("Starting Execution")
 	rand.Seed(time.Now().UnixNano())
-	asyncAwaitTest()
-	compareTimeDifference(awaitAllTest, SynchronousTest, 20)
-	whenDoneTest()
-	whenAllDoneTest()
+
+	errorHandlingTest()
+	time.Sleep(1 * time.Second)
+	promiseFunctionalityTest()
+	time.Sleep(3 * time.Second)
+	compareTimeDifference(ConcurrentTest, SynchronousTest, 20)
 }
 
-func asyncAwaitTest() {
-	fmt.Println("\nTesting async/await functionality")
-	fmt.Printf("%v\n", Async(getJokeFromAPI).Await())
-	fmt.Printf("%v\n", Async(randWithDelay, 2).Await())
+func errorHandlingTest() {
+	joke, _ := Async(getJokeFromAPI).Await()
+	fmt.Printf("%v\n", joke)
+
+	_, err := Async(randWithDelay, 2).Await()
+	fmt.Printf("%v\n", err)
+
+	_, err = Async(randWithDelay, 7).Await()
+
+	fmt.Printf("%v\n", err)
+
+	fmt.Println("\nTested async/await functionality")
 }
 
-func awaitAllTest(numberOfExecutions int) {
+func promiseFunctionalityTest() {
+	Async(randWithDelay, 4).
+		Then(func(item int) (int, error) {
+			fmt.Printf("item: %v\n", item)
+			return 0, errors.New("My Bad")
+		}).
+		Catch(func(err error) { fmt.Printf("err: %v\n", err) }).
+		Then(func(item int) { fmt.Printf("item: %v\n", item) }).
+		Await()
+
+	fmt.Println("\nTested Promise like functionality as in js")
+}
+
+func ConcurrentTest(numberOfExecutions int) {
 	awaitables := koazee.StreamOf(
 		make([]string, numberOfExecutions)).
 		Map(
@@ -56,40 +80,6 @@ func SynchronousTest(numberOfExecutions int) {
 	}
 }
 
-func whenDoneTest() {
-	fmt.Println("\nTesting whenDone callback functionality")
-	done := false
-
-	CallWhenDone(
-		func(randNum int) {
-			fmt.Printf("%v\n", randNum)
-			done = true
-		}, Async(randWithDelay, 3))
-
-	for !done {
-	}
-}
-
-func whenAllDoneTest() {
-	fmt.Println("\nTesting whenAllDone callback functionality")
-	done := false
-
-	CallWhenAllDone(
-		func(results []interface{}) {
-			for _, result := range results {
-				fmt.Printf("result: %v\n\n", result)
-			}
-			done = true
-		},
-		Async(randWithDelay, 2),
-		Async(getJokeFromAPI),
-		Async(getJokeFromAPI),
-	)
-
-	for !done {
-	}
-}
-
 func compareTimeDifference(
 	concurrentFunc interface{},
 	nonConcurrentFunc interface{},
@@ -97,12 +87,19 @@ func compareTimeDifference(
 
 	conurrectTime := MeasureTime(concurrentFunc, numberOfExecutions)
 	nonConcurrentTime := MeasureTime(nonConcurrentFunc, numberOfExecutions)
-	fmt.Printf("Concurrent took %v and Normal took %v", conurrectTime, nonConcurrentTime)
+	fmt.Printf("Concurrent took %v and Normal took %v after %v runs",
+		conurrectTime,
+		nonConcurrentTime,
+		numberOfExecutions)
 }
 
-func randWithDelay(delay int) int {
+func randWithDelay(delay int) (int, error) {
+	if delay > 5 {
+		return 0, errors.New("Delay is too big!")
+	}
+
 	time.Sleep(time.Duration(delay) * time.Second)
-	return rand.Int()
+	return rand.Int(), nil
 }
 
 func getJokeFromAPI() string {
