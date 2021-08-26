@@ -31,6 +31,7 @@ func MeasureTime(function interface{}, args ...interface{}) time.Duration {
 
 	start := time.Now()
 	ReflectFunction(function).Call(reflectedArguments[:])
+	
 	return time.Since(start)
 }
 
