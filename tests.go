@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"log"
+	"io"
 	"math/rand"
 	"net/http"
 	"time"
@@ -61,7 +60,8 @@ func ConcurrentTest(numberOfExecutions int) {
 		Do().Out().
 		Val().([]Awaitable)
 
-	for index, result := range AwaitAll(awaitables...) {
+	results, _ := AwaitAll(awaitables...)
+	for index, result := range results {
 		fmt.Printf("%v: %v\n", index+1, result.(string))
 	}
 }
@@ -69,7 +69,7 @@ func ConcurrentTest(numberOfExecutions int) {
 func SynchronousTest(numberOfExecutions int) {
 	results := koazee.StreamOf(make([]int, numberOfExecutions)).
 		Map(
-			func(int) string {
+			func(int) (string, error) {
 				return getJokeFromAPI()
 			}).
 		Do().Out().
@@ -102,26 +102,26 @@ func randWithDelay(delay int) (int, error) {
 	return rand.Int(), nil
 }
 
-func getJokeFromAPI() string {
+func getJokeFromAPI() (string, error) {
 	httpResp, err := http.Get("https://v2.jokeapi.dev/joke/Any")
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
-	jsonResponse, err := ioutil.ReadAll(httpResp.Body)
+	jsonResponse, err := io.ReadAll(httpResp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	var response map[string]interface{}
 	json.Unmarshal([]byte(string(jsonResponse)), &response)
-
 	var joke string
+
 	if _, ok := response["joke"]; ok {
 		joke = fmt.Sprintf("\njoke: %v", response["joke"])
 	} else {
 		joke = fmt.Sprintf("\nquestion: %v\nanswer: %v", response["setup"], response["delivery"])
 	}
 
-	return joke
+	return joke, nil
 }
