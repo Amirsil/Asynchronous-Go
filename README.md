@@ -26,7 +26,8 @@ You could also use Promise like notation:
 result, err := Async(increaseNum, 5).
                   Then(func(num int) (int, error) { return num - 1, errors.New("Wow! Thats an error!") }).
                   Catch(func(err error) { log.Fatal(err) }).
-                  Then(func(num int) int { return num })
+                  Then(func(num int) int { return num }).
+                  Await()
 
 // result == 5
 ```
