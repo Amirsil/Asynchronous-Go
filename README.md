@@ -3,6 +3,8 @@ Implementation of Async/Await and Promise.All Using Go's primitives for concurre
 
 No need for special asynchronous functions when every function could be run asynchronously :D
 
+This is the generic version so run/build the program with ```-gcflags=-G=3``` flag
+
 Usage:
 
 ```go

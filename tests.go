@@ -8,8 +8,6 @@ import (
 	"math/rand"
 	"net/http"
 	"time"
-
-	"github.com/wesovilabs/koazee"
 )
 
 func main() {
@@ -18,79 +16,21 @@ func main() {
 
 	errorHandlingTest()
 	time.Sleep(1 * time.Second)
-	promiseFunctionalityTest()
-	time.Sleep(3 * time.Second)
-	compareTimeDifference(ConcurrentTest, SynchronousTest, 20)
+	// compareTimeDifference(ConcurrentTest, SynchronousTest, 20)
 }
 
 func errorHandlingTest() {
-	joke, _ := Async(getJokeFromAPI).Await()
-	fmt.Printf("%v\n", joke)
+	joke, _ := async[string](getJokeFromAPI).await()
+	fmt.Printf("```%T```: %v\n", joke, joke)
 
-	_, err := Async(randWithDelay, 2).Await()
+	_, err := async[int](randWithDelay, 2).await()
 	fmt.Printf("%v\n", err)
 
-	_, err = Async(randWithDelay, 7).Await()
+	_, err = async[int](randWithDelay, 7).await()
 
 	fmt.Printf("%v\n", err)
 
 	fmt.Println("\nTested async/await functionality")
-}
-
-func promiseFunctionalityTest() {
-	Async(randWithDelay, 4).
-		Then(func(item int) (int, error) {
-			fmt.Printf("item: %v\n", item)
-			return 0, errors.New("My Bad")
-		}).
-		Catch(func(err error) { fmt.Printf("err: %v\n", err) }).
-		Then(func(item int) { fmt.Printf("item: %v\n", item) }).
-		Await()
-
-	fmt.Println("\nTested Promise like functionality as in js")
-}
-
-func ConcurrentTest(numberOfExecutions int) {
-	awaitables := koazee.StreamOf(
-		make([]string, numberOfExecutions)).
-		Map(
-			func(string) Awaitable {
-				return Async(getJokeFromAPI)
-			}).
-		Do().Out().
-		Val().([]Awaitable)
-
-	results, _ := AwaitAll(awaitables...)
-	for index, result := range results {
-		fmt.Printf("%v: %v\n", index+1, result.(string))
-	}
-}
-
-func SynchronousTest(numberOfExecutions int) {
-	results := koazee.StreamOf(make([]int, numberOfExecutions)).
-		Map(
-			func(int) (string, error) {
-				return getJokeFromAPI()
-			}).
-		Do().Out().
-		Val().([]string)
-
-	for index, result := range results {
-		fmt.Printf("%v: %v\n", index+1, result)
-	}
-}
-
-func compareTimeDifference(
-	concurrentFunc interface{},
-	nonConcurrentFunc interface{},
-	numberOfExecutions int) {
-
-	conurrectTime := MeasureTime(concurrentFunc, numberOfExecutions)
-	nonConcurrentTime := MeasureTime(nonConcurrentFunc, numberOfExecutions)
-	fmt.Printf("Concurrent took %v and Normal took %v after %v runs",
-		conurrectTime,
-		nonConcurrentTime,
-		numberOfExecutions)
 }
 
 func randWithDelay(delay int) (int, error) {

@@ -4,8 +4,8 @@ import (
 	"reflect"
 )
 
-func Async(function interface{}, args ...interface{}) Awaitable {
-	valueChannel := make(chan interface{}, 1)
+func async[T any](function interface{}, args ...interface{}) awaitable[T] {
+	valueChannel := make(chan T, 1)
 	errorChannel := make(chan error, 1)
 
 	go func() {
@@ -18,20 +18,9 @@ func Async(function interface{}, args ...interface{}) Awaitable {
 		}
 
 		result := ReflectFunction(function).Call(reflectedArguments[:])
-		valueChannel <- result[0].Interface()
+		valueChannel <- result[0].Interface().(T)
 		errorChannel <- GetFunctionError(result)
 	}()
 
-	return Awaitable{valueChannel, errorChannel}
-}
-
-func AwaitAll(awaitables ...Awaitable) ([]interface{}, []error) {
-	results := make([]interface{}, len(awaitables))
-	errors := make([]error, len(awaitables))
-
-	for index, awaitable := range awaitables {
-		results[index], errors[index] = awaitable.Await()
-	}
-
-	return results, errors
+	return awaitable[T]{valueChannel, errorChannel}
 }
