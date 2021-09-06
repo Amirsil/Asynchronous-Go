@@ -6,7 +6,7 @@ No need for special asynchronous functions when every function could be run asyn
 Usage:
 
 ```go
-func increaseNum(num int) {
+func increaseNum(num int) int {
   time.Sleep(1 * time.Duration)
   return num + 1
 }
